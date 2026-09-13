@@ -26,14 +26,15 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           # Pull the absolute latest commit from ggml-org/llama.cpp master branch
           git submodule update --remote --merge llama.cpp
-          
-          # If changes exist, commit the new submodule reference back to your repo
+
+          # If changes exist, commit and push back to main safely
           if [[ -n $(git status --porcelain) ]]; then
             echo "Submodule updated! Committing changes..."
             git commit -am "chore(deps): bump llama.cpp submodule to latest upstream"
+            git pull --rebase origin main
             git push
           else
             echo "Submodule is already on the latest commit."
