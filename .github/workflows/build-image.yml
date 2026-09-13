@@ -2,8 +2,8 @@ name: Bleeding Edge Build (llama-server & rpc-worker)
 
 on:
   schedule:
-    - cron: '0 2 * * *' # Runs daily at 02:00 UTC
-  workflow_dispatch: # Allows manual trigger from GitHub UI
+    - cron: '0 2 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -20,9 +20,12 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Update llama.cpp to latest upstream HEAD
+      - name: Update llama.cpp & capture commit SHA
+        id: submodule
         run: |
           git submodule update --remote --merge llama.cpp
+          cd llama.cpp
+          echo "COMMIT_SHA=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Set lowercase repository owner
         run: |
@@ -45,6 +48,9 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ghcr.io/${{ env.REPO_OWNER }}/llama-server:latest
+          labels: |
+            org.opencontainers.image.revision=${{ steps.submodule.outputs.COMMIT_SHA }}
+            org.opencontainers.image.source=https://github.com/ggml-org/llama.cpp
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -55,5 +61,8 @@ jobs:
           file: ./Dockerfile.rpc-pascal
           push: true
           tags: ghcr.io/${{ env.REPO_OWNER }}/llama-rpc-pascal:latest
+          labels: |
+            org.opencontainers.image.revision=${{ steps.submodule.outputs.COMMIT_SHA }}
+            org.opencontainers.image.source=https://github.com/ggml-org/llama.cpp
           cache-from: type=gha
           cache-to: type=gha,mode=max
