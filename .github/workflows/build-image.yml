@@ -19,23 +19,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: main  # Force checkout of the branch instead of a detached SHA
           submodules: recursive
-          fetch-depth: 0 # Required to push git updates back cleanly
+          fetch-depth: 0
 
       - name: Bump llama.cpp submodule to absolute latest
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Pull the absolute latest commit from ggml-org/llama.cpp master branch
+          # Ensure local branch is explicitly tracking main and up to date
+          git checkout main
+          git pull origin main
+
+          # Update the submodule reference
           git submodule update --remote --merge llama.cpp
 
-          # If changes exist, commit and push back to main safely
-          if [[ -n $(git status --porcelain) ]]; then
+          # Check if the submodule pointer changed
+          if [[ -n $(git status --porcelain llama.cpp) ]]; then
             echo "Submodule updated! Committing changes..."
-            git commit -am "chore(deps): bump llama.cpp submodule to latest upstream"
-            git fetch origin main
-            git rebase origin/main
+            git add llama.cpp
+            git commit -m "chore(deps): bump llama.cpp submodule to latest upstream"
             git push origin main
           else
             echo "Submodule is already on the latest commit."
