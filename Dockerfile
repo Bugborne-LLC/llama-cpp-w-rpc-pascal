@@ -39,7 +39,9 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 COPY --from=builder /app/build/bin/llama-server /app/llama-server
-COPY --from=builder /app/build/bin/*.so* /app/ 2>/dev/null || true
+# Safely copy any optional dynamic libraries if they exist
+RUN --mount=type=bind,from=builder,source=/app/build/bin,target=/tmp/bin \
+    cp /tmp/bin/*.so* /app/ 2>/dev/null || true
 
 ENV LD_LIBRARY_PATH=/app:$LD_LIBRARY_PATH
 
