@@ -22,6 +22,7 @@ RUN cmake -B build \
     -DGGML_CUDA=ON \
     -DGGML_RPC=ON \
     -DGGML_CUDA_GRAPHS=OFF \
+    -DCMAKE_CUDA_ARCHITECTURES=all-major \
     -DCMAKE_BUILD_TYPE=Release \
     && cmake --build build --config Release -j$(nproc)
 
