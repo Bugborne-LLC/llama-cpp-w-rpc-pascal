@@ -21,6 +21,10 @@ COPY llama.cpp /app/
 RUN cmake -B build \
     -DGGML_CUDA=ON \
     -DGGML_RPC=ON \
+    -DGGML_NATIVE=OFF \
+    -DGGML_AVX512=OFF \
+    -DGGML_AVX2=ON \
+    -DGGML_AVX=ON \
     -DGGML_CUDA_GRAPHS=OFF \
     -DCMAKE_CUDA_ARCHITECTURES="120" \
     -DCMAKE_BUILD_TYPE=Release \
