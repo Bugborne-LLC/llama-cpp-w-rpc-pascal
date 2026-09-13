@@ -23,9 +23,11 @@ jobs:
       - name: Update llama.cpp & capture commit SHA
         id: submodule
         run: |
-          git submodule update --remote --merge llama.cpp
           cd llama.cpp
+          git fetch origin
+          git checkout origin/master
           echo "COMMIT_SHA=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          cd ..
 
       - name: Set lowercase repository owner
         run: |
