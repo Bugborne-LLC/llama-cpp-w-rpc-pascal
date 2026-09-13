@@ -1,0 +1,70 @@
+name: Bleeding Edge Build (llama-server & rpc-worker)
+
+on:
+  schedule:
+    # Runs daily at 02:00 UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+permissions:
+  contents: write  # Allows committing submodule updates back to git
+  packages: write  # Allows pushing images to GHCR
+
+jobs:
+  update-and-build:
+    name: Bump Submodule and Build Containers
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0 # Required to push git updates back cleanly
+
+      - name: Bump llama.cpp submodule to absolute latest
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Pull the absolute latest commit from ggml-org/llama.cpp master branch
+          git submodule update --remote --merge llama.cpp
+          
+          # If changes exist, commit the new submodule reference back to your repo
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "Submodule updated! Committing changes..."
+            git commit -am "chore(deps): bump llama.cpp submodule to latest upstream"
+            git push
+          else
+            echo "Submodule is already on the latest commit."
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push Primary Host (llama-server - CUDA 12.8)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/llama-server:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & Push RPC Worker (1080 Ti - CUDA 12.4 + Pascal Flags)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.rpc-pascal
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/llama-rpc-pascal:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

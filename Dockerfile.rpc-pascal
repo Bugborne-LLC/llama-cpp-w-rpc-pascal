@@ -1,0 +1,55 @@
+ARG CUDA_VERSION=12.4.1
+ARG UBUNTU_VERSION=22.04
+
+# Stage 1: Builder
+FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu${UBUNTU_VERSION} AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    cmake \
+    build-essential \
+    libcurl4-openssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY llama.cpp /app/
+
+# Configure CMake with Pascal (GTX 1080 Ti) optimizations
+RUN cmake -B build \
+    -DGGML_CUDA=ON \
+    -DGGML_RPC=ON \
+    -DGGML_CUDA_GRAPHS=OFF \
+    -DGGML_CUDA_FA=OFF \
+    -DGGML_CUDA_F16=OFF \
+    -DCMAKE_CUDA_ARCHITECTURES=61 \
+    -DGGML_CUDA_NO_VMM=ON \
+    -DGGML_CUDA_FORCE_MMQ=ON \
+    -DGGML_CUDA_FORCE_CUBLAS=ON \
+    -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build build --config Release -j$(nproc)
+
+# Stage 2: Runtime Image
+FROM nvidia/cuda:${CUDA_VERSION}-runtime-ubuntu${UBUNTU_VERSION} AS runtime
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    libgomp1 \
+    libcurl4 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy the compiled RPC binary
+COPY --from=builder /app/build/bin/rpc-server* /app/rpc-server
+COPY --from=builder /app/build/bin/*.so* /app/ 2>/dev/null || true
+
+# Pascal GPU environment runtime variables
+ENV GGML_CUDA_FORCE_MMQ=1
+ENV GGML_CUDA_DISABLE_GRAPHS=1
+
+EXPOSE 50052
+
+ENTRYPOINT ["/app/rpc-server", "-H", "0.0.0.0", "-p", "50052"]
