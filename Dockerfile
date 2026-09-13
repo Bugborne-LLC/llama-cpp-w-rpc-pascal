@@ -1,5 +1,5 @@
-ARG CUDA_VERSION=12.8.1
-ARG UBUNTU_VERSION=24.04
+ARG CUDA_VERSION=13.3.1
+ARG UBUNTU_VERSION=26.04
 
 # Stage 1: Builder
 FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu${UBUNTU_VERSION} AS builder
@@ -40,6 +40,8 @@ WORKDIR /app
 COPY --from=builder /app/build/bin/llama-server /app/llama-server
 COPY --from=builder /app/build/bin/rpc-server /app/rpc-server
 COPY --from=builder /app/build/bin/*.so* /app/ 2>/dev/null || true
+
+ENV LD_LIBRARY_PATH=/app:$LD_LIBRARY_PATH
 
 EXPOSE 8080
 
