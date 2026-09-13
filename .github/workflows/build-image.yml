@@ -34,8 +34,9 @@ jobs:
           if [[ -n $(git status --porcelain) ]]; then
             echo "Submodule updated! Committing changes..."
             git commit -am "chore(deps): bump llama.cpp submodule to latest upstream"
-            git pull --rebase origin main
-            git push
+            git fetch origin main
+            git rebase origin/main
+            git push origin main
           else
             echo "Submodule is already on the latest commit."
           fi
