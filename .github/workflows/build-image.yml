@@ -19,7 +19,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: main  # Force checkout of the branch instead of a detached SHA
+          ref: main
           submodules: recursive
           fetch-depth: 0
 
@@ -28,18 +28,19 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Ensure local branch is explicitly tracking main and up to date
-          git checkout main
-          git pull origin main
-
-          # Update the submodule reference
+          # 1. Update the submodule
           git submodule update --remote --merge llama.cpp
 
-          # Check if the submodule pointer changed
+          # 2. Check if the submodule pointer changed
           if [[ -n $(git status --porcelain llama.cpp) ]]; then
             echo "Submodule updated! Committing changes..."
             git add llama.cpp
             git commit -m "chore(deps): bump llama.cpp submodule to latest upstream"
+
+            # 3. Pull latest origin/main and rebase your commit on top of it
+            git pull --rebase origin main
+
+            # 4. Push cleanly back to GitHub
             git push origin main
           else
             echo "Submodule is already on the latest commit."
