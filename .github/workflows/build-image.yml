@@ -2,49 +2,31 @@ name: Bleeding Edge Build (llama-server & rpc-worker)
 
 on:
   schedule:
-    # Runs daily at 02:00 UTC
-    - cron: '0 2 * * *'
+    - cron: '0 2 * * *' # Runs daily at 02:00 UTC
   workflow_dispatch: # Allows manual trigger from GitHub UI
 
 permissions:
-  contents: write  # Allows committing submodule updates back to git
-  packages: write  # Allows pushing images to GHCR
+  contents: read
+  packages: write
 
 jobs:
-  update-and-build:
-    name: Bump Submodule and Build Containers
+  build-and-push:
+    name: Build Containers with Latest llama.cpp
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: main
           submodules: recursive
-          fetch-depth: 0
 
-      - name: Bump llama.cpp submodule to absolute latest
+      - name: Update llama.cpp to latest upstream HEAD
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-          # 1. Update the submodule
           git submodule update --remote --merge llama.cpp
 
-          # 2. Check if the submodule pointer changed
-          if [[ -n $(git status --porcelain llama.cpp) ]]; then
-            echo "Submodule updated! Committing changes..."
-            git add llama.cpp
-            git commit -m "chore(deps): bump llama.cpp submodule to latest upstream"
-
-            # 3. Pull latest origin/main and rebase your commit on top of it
-            git pull --rebase origin main
-
-            # 4. Push cleanly back to GitHub
-            git push origin main
-          else
-            echo "Submodule is already on the latest commit."
-          fi
+      - name: Set lowercase repository owner
+        run: |
+          echo "REPO_OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -55,10 +37,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set lowercase repository owner
-        run: |
-          echo "REPO_OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
 
       - name: Build & Push Primary Host (llama-server)
         uses: docker/build-push-action@v6
