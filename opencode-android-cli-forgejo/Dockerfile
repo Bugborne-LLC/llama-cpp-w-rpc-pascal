@@ -14,15 +14,18 @@ ENV PATH="${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/cmdline-tools/latest/bi
 RUN apk update && apk add --no-cache \
     curl \
     git \
-    forgejo-cli \
+    openjdk21 \
     ca-certificates \
-    openjdk-21-jdk-headless \
     nodejs \
     npm \
     unzip \
     bash \
     gcompat \
     libc6-compat
+    
+# Download pre-built forgejo-cli binary directly for Linux x86_64
+RUN curl -L https://codeberg.org/forgejo-contrib/forgejo-cli/releases/latest/download/forgejo-cli-linux-amd64 -o /usr/local/bin/forgejo-cli \
+    && chmod +x /usr/local/bin/forgejo-cli
 
 # 3. Install official Google Android CLI
 RUN curl -fsSL https://dl.google.com/android/cli/latest/linux_x86_64/install_root.sh | bash
