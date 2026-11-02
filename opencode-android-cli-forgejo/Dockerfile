@@ -28,7 +28,7 @@ RUN curl -L https://codeberg.org/forgejo-contrib/forgejo-cli/releases/latest/dow
     && chmod +x /usr/local/bin/forgejo-cli
 
 # 3. Install official Google Android CLI
-RUN curl -fsSL https://dl.google.com/android/cli/latest/linux_x86_64/install_root.sh | bash
+RUN curl -fsSL https://dl.google.com/android/cli/latest/linux_x86_64/install_root.sh | /bin/bash
 
 # 4. Install Android SDK tools, platforms, NDK, and cmake
 RUN android sdk install \
