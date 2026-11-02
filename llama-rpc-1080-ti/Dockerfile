@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 ARG CUDA_VERSION=12.4.1
 ARG UBUNTU_VERSION=22.04
 
@@ -13,8 +14,10 @@ RUN apt-get update && apt-get install -y \
     libcurl4-openssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Clone llama.cpp directly during the build (you can swap master for a specific tag like tag:b3000)
-RUN git clone --depth 1 https://github.com/ggml-org/llama.cpp.git /app/llama.cpp
+WORKDIR /app
+
+# Clone llama.cpp directly
+RUN git clone --depth 1 https://github.com/ggerganov/llama.cpp.git /app/llama.cpp
 
 WORKDIR /app/llama.cpp
 
@@ -48,10 +51,11 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copy the compiled RPC binary
-COPY --from=builder /app/build/bin/ggml-rpc-server* /app/ggml-rpc-server
-# Safely copy any optional dynamic libraries if they exist
-RUN --mount=type=bind,from=builder,source=/app/build/bin,target=/tmp/bin \
+# Copy the compiled RPC binary from the correct nested path
+COPY --from=builder /app/llama.cpp/build/bin/ggml-rpc-server* /app/ggml-rpc-server
+
+# Safely copy optional dynamic libraries from the correct path
+RUN --mount=type=bind,from=builder,source=/app/llama.cpp/build/bin,target=/tmp/bin \
     cp /tmp/bin/*.so* /app/ 2>/dev/null || true
 
 ENV LD_LIBRARY_PATH=/app:$LD_LIBRARY_PATH
