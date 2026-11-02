@@ -9,13 +9,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     cmake \
     build-essential \
+    git \
     libcurl4-openssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Clone llama.cpp directly during the build (you can swap master for a specific tag like tag:b3000)
+RUN git clone --depth 1 https://github.com/ggerganov/llama.cpp.git /app/llama.cpp
 
-# Copy the submodule source directly into the image
-COPY llama.cpp /app/
+WORKDIR /app/llama.cpp
 
 # Configure CMake with CUDA and RPC enabled
 RUN cmake -B build \
@@ -25,7 +26,6 @@ RUN cmake -B build \
     -DGGML_AVX512=OFF \
     -DGGML_AVX2=ON \
     -DGGML_AVX=ON \
-    -DGGML_CUDA_GRAPHS=OFF \
     -DCMAKE_CUDA_ARCHITECTURES="120" \
     -DCMAKE_BUILD_TYPE=Release \
     && cmake --build build --config Release -j$(nproc)
@@ -43,6 +43,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 COPY --from=builder /app/build/bin/llama-server /app/llama-server
+
 # Safely copy any optional dynamic libraries if they exist
 RUN --mount=type=bind,from=builder,source=/app/build/bin,target=/tmp/bin \
     cp /tmp/bin/*.so* /app/ 2>/dev/null || true

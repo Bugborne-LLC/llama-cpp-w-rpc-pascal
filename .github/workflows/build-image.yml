@@ -1,4 +1,4 @@
-name: Bleeding Edge Build (llama-server & rpc-worker)
+name: Build All Docker Images (Matrix)
 
 on:
   schedule:
@@ -10,61 +10,54 @@ permissions:
   packages: write
 
 jobs:
-  build-and-push:
-    name: Build Containers with Latest llama.cpp
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Llama.cpp builds
+          - image_name: llama-server
+            context: ./llama-cpp-with-rpc
+            tag: latest
+          - image_name: llama-rpc-pascal
+            context: ./llama-rpc-1080-ti
+            tag: latest
+          - image_name: llama-server-pascal
+            context: ./llama-server-1080-ti
+            tag: latest
+
+          # Completely unrelated Android/Forgejo CLI build
+          - image_name: opencode-android-cli-forgejo
+            context: ./opencode-android-cli-forgejo
+            tag: latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
-        with:
-          submodules: recursive
-
-      - name: Update llama.cpp & capture commit SHA
-        id: submodule
-        run: |
-          cd llama.cpp
-          git fetch origin
-          git checkout origin/master
-          echo "COMMIT_SHA=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-          cd ..
+        uses: actions/checkout@v4
 
       - name: Set lowercase repository owner
         run: |
           echo "REPO_OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v4
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & Push Primary Host (llama-server)
-        uses: docker/build-push-action@v7
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./Dockerfile
+          context: ${{ matrix.context }}
+          file: ${{ matrix.context }}/Dockerfile
           push: true
-          tags: ghcr.io/${{ env.REPO_OWNER }}/llama-server:latest
+          tags: ghcr.io/${{ env.REPO_OWNER }}/${{ matrix.image_name }}:${{ matrix.tag }}
           labels: |
-            org.opencontainers.image.revision=${{ steps.submodule.outputs.COMMIT_SHA }}
-            org.opencontainers.image.source=https://github.com/ggml-org/llama.cpp
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build & Push RPC Worker (1080 Ti - Pascal)
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ./Dockerfile.rpc-pascal
-          push: true
-          tags: ghcr.io/${{ env.REPO_OWNER }}/llama-rpc-pascal:latest
-          labels: |
-            org.opencontainers.image.revision=${{ steps.submodule.outputs.COMMIT_SHA }}
-            org.opencontainers.image.source=https://github.com/ggml-org/llama.cpp
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
