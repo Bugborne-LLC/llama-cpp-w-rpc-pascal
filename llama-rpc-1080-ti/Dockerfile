@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Clone llama.cpp directly during the build (you can swap master for a specific tag like tag:b3000)
-RUN git clone --depth 1 https://github.com/ggerganov/llama.cpp.git /app/llama.cpp
+RUN git clone --depth 1 https://github.com/ggml-org/llama.cpp.git /app/llama.cpp
 
 WORKDIR /app/llama.cpp
 

@@ -10,8 +10,8 @@ ENV ANDROID_HOME="/root/Android/Sdk"
 # 2. Add platform-tools and cmdline-tools directly to PATH
 ENV PATH="${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/cmdline-tools/latest/bin:${PATH}"
 
-# Install core build dependencies, OpenJDK 21, Git, and utilities
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install Alpine equivalents + gcompat (crucial for running Android SDK/NDK binaries on Alpine)
+RUN apk update && apk add --no-cache \
     curl \
     git \
     forgejo-cli \
@@ -20,7 +20,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nodejs \
     npm \
     unzip \
-    && rm -rf /var/lib/apt-get/lists/*
+    bash \
+    gcompat \
+    libc6-compat
 
 # 3. Install official Google Android CLI
 RUN curl -fsSL https://dl.google.com/android/cli/latest/linux_x86_64/install_root.sh | bash

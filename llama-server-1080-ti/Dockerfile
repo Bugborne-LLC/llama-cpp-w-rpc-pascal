@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Clone llama.cpp directly
-RUN git clone --depth 1 https://github.com/ggerganov/llama.cpp.git /app/llama.cpp
+RUN git clone --depth 1 https://github.com/ggml-org/llama.cpp.git /app/llama.cpp
 
 WORKDIR /app/llama.cpp
 
