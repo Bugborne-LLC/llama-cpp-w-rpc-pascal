@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 ARG CUDA_VERSION=13.3.1
 ARG UBUNTU_VERSION=26.04
 
@@ -13,7 +14,7 @@ RUN apt-get update && apt-get install -y \
     libcurl4-openssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Clone llama.cpp directly during the build (you can swap master for a specific tag like tag:b3000)
+# Clone llama.cpp directly during the build
 RUN git clone --depth 1 https://github.com/ggml-org/llama.cpp.git /app/llama.cpp
 
 WORKDIR /app/llama.cpp
@@ -42,10 +43,11 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY --from=builder /app/build/bin/llama-server /app/llama-server
+# Copy the binary from the correct nested path
+COPY --from=builder /app/llama.cpp/build/bin/llama-server /app/llama-server
 
-# Safely copy any optional dynamic libraries if they exist
-RUN --mount=type=bind,from=builder,source=/app/build/bin,target=/tmp/bin \
+# Safely copy dynamic libraries from the correct nested path
+RUN --mount=type=bind,from=builder,source=/app/llama.cpp/build/bin,target=/tmp/bin \
     cp /tmp/bin/*.so* /app/ 2>/dev/null || true
 
 ENV LD_LIBRARY_PATH=/app:$LD_LIBRARY_PATH
