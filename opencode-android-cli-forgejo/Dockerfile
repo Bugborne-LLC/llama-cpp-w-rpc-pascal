@@ -10,16 +10,30 @@ ENV ANDROID_HOME="/root/Android/Sdk"
 # 2. Add platform-tools and cmdline-tools directly to PATH
 ENV PATH="${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/cmdline-tools/latest/bin:${PATH}"
 
-# Install core build dependencies, OpenJDK 21, Node.js, and utilities via apt
+# Install core build dependencies, OpenJDK 21, Node.js, jq, and utilities via apt
+# (Removed forgejo-cli from here, added jq for parsing release JSON)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \
-    forgejo-cli \
+    jq \
     ca-certificates \
     openjdk-21-jdk-headless \
     nodejs \
     npm \
     && rm -rf /var/lib/apt-get/lists/*
+
+# Automatically fetch and install the latest pre-built forgejo-cli binary from Codeberg
+RUN LATEST_URL=$(curl -s https://codeberg.org/api/v1/repos/forgejo-contrib/forgejo-cli/releases/latest \
+    | jq -r '.assets[] | select(.name | test("x86_64.*linux")) | .browser_download_url') \
+    && echo "Downloading forgejo-cli from: $LATEST_URL" \
+    && curl -fL -o /tmp/forgejo-cli.tar.gz "$LATEST_URL" \
+    && tar -xzf /tmp/forgejo-cli.tar.gz -C /tmp \
+    # Locate the binary in the extracted files and move it to /usr/local/bin
+    && find /tmp -maxdepth 2 \( -name "forgejo-cli" -o -name "fj" \) -exec cp {} /usr/local/bin/forgejo-cli \; \
+    && chmod +x /usr/local/bin/forgejo-cli \
+    # Optional: create an 'fj' symlink if you prefer the short command alias
+    && ln -s /usr/local/bin/forgejo-cli /usr/local/bin/fj \
+    && rm -rf /tmp/forgejo-cli.tar.gz /tmp/forgejo-cli*
 
 # Install OpenCode CLI via script
 RUN curl -fsSL https://opencode.ai/v2/install | bash
@@ -48,9 +62,6 @@ RUN android sdk install \
 RUN android init
 
 WORKDIR /workspace
-
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
