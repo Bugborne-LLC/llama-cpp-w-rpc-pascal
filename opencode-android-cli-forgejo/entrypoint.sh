@@ -17,7 +17,7 @@ FORGEJO_HOST="${FORGEJO_HOST%/}"
 if [ -n "$FORGEJO_TOKEN" ] && [ -n "$FORGEJO_USER" ]; then
     echo "Configuring fj CLI and Git credentials for $FORGEJO_USER..."
     
-    fj --host "$FORGEJO_HOST" auth add-key "$FORGEJO_USER" "$FORGEJO_TOKEN" || true
+    fj --host "$FORGEJO_HOST" auth add-token "$FORGEJO_TOKEN" || true
     
     git config --global credential.helper store
     printf "url=%s\nusername=%s\npassword=%s\n\n" "$FORGEJO_HOST" "$FORGEJO_USER" "$FORGEJO_TOKEN" | git credential approve
